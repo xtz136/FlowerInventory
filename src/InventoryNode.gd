@@ -33,151 +33,151 @@ signal typed_item
 signal sorted_item
 
 func _ready():
-	_data = load(data).new()
-	inventory_base = get_node(inventory_base_path)
-	del_array = []
-	sort_arr = []
+    _data = load(data).new()
+    inventory_base = get_node(inventory_base_path)
+    del_array = []
+    sort_arr = []
 
 ## 得到一个包含所有 Item 的数组，大概看起来像这样：[[10001, "Weapons", 2], [10002, "Weapons", 4], [10015, "Weapons", 1]]
 func get_all_item() -> Array:
-	var result:Array
-	for i in inventory_base.get_children():
-		var a_item:Array
-		# 拿到ID、名称、数量并且添加到数组
-		a_item.append(i.item_id)
-		a_item.append(i.item_type)
-		a_item.append(i.item_num)
-		result.append(a_item)
-	return result
+    var result:Array
+    for i in inventory_base.get_children():
+        var a_item:Array
+        # 拿到ID、名称、数量并且添加到数组
+        a_item.append(i.item_id)
+        a_item.append(i.item_type)
+        a_item.append(i.item_num)
+        result.append(a_item)
+    return result
 
 # CC4   --BY 群确实
 ## 添加物品
 func add_item(id:int, num:int, type:String) -> void:
-	has_target_item = false
-	# 遍历所有子节点
-	for i in inventory_base.get_child_count():
-		var child: Node = get_child_i(i)
-		if child.item_id == id:
-			has_target_item = true
-			# 如果子节点的ID=当前传入ID，就是要添加相同物品 -> 改变数字
-			if _data[type].data[id].has("stack"):
-				child.item_num = child.item_num + num
-			else:
-				# 如果没有设置 stack 字段，那么就添加重复的物品
-				_instance_node(id, num, type)
-			
-			break
+    has_target_item = false
+    # 遍历所有子节点
+    for i in inventory_base.get_child_count():
+        var child: Node = get_child_i(i)
+        if child.item_id == id:
+            has_target_item = true
+            # 如果子节点的ID=当前传入ID，就是要添加相同物品 -> 改变数字
+            if _data[type].data[id].has("stack"):
+                child.item_num = child.item_num + num
+            else:
+                # 如果没有设置 stack 字段，那么就添加重复的物品
+                _instance_node(id, num, type)
+            
+            break
 
-	# 添加新的物品
-	if not has_target_item:
-		_instance_node(id, num, type)
-	
-	added_item.emit()
+    # 添加新的物品
+    if not has_target_item:
+        _instance_node(id, num, type)
+    
+    added_item.emit()
 
 ## 实际上是真正的添加物品（ add_item() 是包装过的），当这个函数执行完毕，发出 add_a_item.emit()
 func _instance_node(id:int, num:int, type:String):
-	var _add_node = item_template.instantiate()
-	inventory_base.add_child(_add_node)
-	_replace_node(_add_node, id, num, type)
-	add_a_item.emit()
+    var _add_node = item_template.instantiate()
+    inventory_base.add_child(_add_node)
+    _replace_node(_add_node, id, num, type)
+    add_a_item.emit()
 
 
 ## 替换物品节点
 func _replace_node(_add_node, id:int, num:int, type:String):
-	_add_node.item_id = id
-	_add_node.item_type = type
-	_add_node.item_num = num
-	_add_node.item_name = _data[type].data[id].name
-	if "icon" in _data[type].data[id]:
-		_add_node.item_icon = _data[type].data[id].icon
+    _add_node.item_id = id
+    _add_node.item_type = type
+    _add_node.item_num = num
+    _add_node.item_name = _data[type].data[id].name
+    if "icon" in _data[type].data[id]:
+        _add_node.item_icon = _data[type].data[id].icon
 
 
 ## 替换物品
 ## FIXME: id 可能相同，应该使用节点的序号
 func replace_item(old_id:int, id:int, num:int, type:String) -> bool:
-	for i in inventory_base.get_child_count(): # -> int
-		var child = get_child_i(i)
-		if child.item_id == old_id:
-			_replace_node(child, id, num, type)
-			return true
-	
-	return false
+    for i in inventory_base.get_child_count(): # -> int
+        var child = get_child_i(i)
+        if child.item_id == old_id:
+            _replace_node(child, id, num, type)
+            return true
+    
+    return false
 
 
 ## 删除物品
 func del_item(id:int, num:int, type:String) -> void:
-	var now_item_num:int = 0
-	for i in inventory_base.get_child_count(): # -> int
-		if get_child_i(i).item_id == id:
-			# 比较删除数量大小
-			var child = get_child_i(i)
-			now_item_num = child.item_num
-			if now_item_num <= num:
-				now_item_num = 0
-				del_array.append(child.get_index())
-			else:
-				now_item_num = now_item_num - num
-				del_array.append(child.get_index())
-			break
+    var now_item_num:int = 0
+    for i in inventory_base.get_child_count(): # -> int
+        if get_child_i(i).item_id == id:
+            # 比较删除数量大小
+            var child = get_child_i(i)
+            now_item_num = child.item_num
+            if now_item_num <= num:
+                now_item_num = 0
+                del_array.append(child.get_index())
+            else:
+                now_item_num = now_item_num - num
+                del_array.append(child.get_index())
+            break
 
-	for i in del_array:
-		if now_item_num == 0:
-			inventory_base.remove_child(inventory_base.get_child(del_array[i]))
-			del_a_item.emit()
-		else:
-			get_child_i(i).item_num = now_item_num
-			del_a_item.emit()
-	
-	all_item.clear()
-	for i in inventory_base.get_children():
-		all_item.append(i.item_id)
-	
-	deled_item.emit()
+    for i in del_array:
+        if now_item_num == 0:
+            inventory_base.remove_child(inventory_base.get_child(del_array[i]))
+            del_a_item.emit()
+        else:
+            get_child_i(i).item_num = now_item_num
+            del_a_item.emit()
+    
+    all_item.clear()
+    for i in inventory_base.get_children():
+        all_item.append(i.item_id)
+    
+    deled_item.emit()
 
 
 # ========== 分类物品 ===========
 ## 分类物品
 func type_item(type:String) -> void:
-	if type == "all":
-		for i in inventory_base.get_child_count():
-			get_child_i(i).show()
-	else:
-		for i in inventory_base.get_child_count(): # -> int
-			# 拿到当前物品分类
-			if get_child_i(i).item_type == type:
-				get_child_i(i).show()
-			else:
-				get_child_i(i).hide()
-	typed_item.emit()
+    if type == "all":
+        for i in inventory_base.get_child_count():
+            get_child_i(i).show()
+    else:
+        for i in inventory_base.get_child_count(): # -> int
+            # 拿到当前物品分类
+            if get_child_i(i).item_type == type:
+                get_child_i(i).show()
+            else:
+                get_child_i(i).hide()
+    typed_item.emit()
 
 ## 排序物品, way仅仅只有 "large_to_small" 和 "small_to_large"
 func sort_item(base:String, way:String) -> void:
-	sort_arr = []
-	# 准备工作
-	for i in inventory_base.get_child_count():
-		# 数组套数组，[0, 1, 2] -> 0: 物品依据，1: 物品ID, 2.唯一ID
-		var child = get_child_i(i)
-		var item_id_arr:Dictionary = _data[child.item_type].data[child.item_id]
-		sort_arr.append([item_id_arr[base], item_id_arr.id, child.get_instance_id()])
-	match way:
-		"large_to_small":
-			sort_arr.sort_custom(large_to_small)
-		"small_to_large":
-			sort_arr.sort_custom(small_to_large)
-	# 移动节点
-	for i in sort_arr.size():
-		inventory_base.move_child(instance_from_id(sort_arr[i][2]), i)
-	sorted_item.emit()
+    sort_arr = []
+    # 准备工作
+    for i in inventory_base.get_child_count():
+        # 数组套数组，[0, 1, 2] -> 0: 物品依据，1: 物品ID, 2.唯一ID
+        var child = get_child_i(i)
+        var item_id_arr:Dictionary = _data[child.item_type].data[child.item_id]
+        sort_arr.append([item_id_arr[base], item_id_arr.id, child.get_instance_id()])
+    match way:
+        "large_to_small":
+            sort_arr.sort_custom(large_to_small)
+        "small_to_large":
+            sort_arr.sort_custom(small_to_large)
+    # 移动节点
+    for i in sort_arr.size():
+        inventory_base.move_child(instance_from_id(sort_arr[i][2]), i)
+    sorted_item.emit()
 
 func large_to_small(a, b):
-	if a[0] > b[0]:
-		return true
-	return false
+    if a[0] > b[0]:
+        return true
+    return false
 
 func small_to_large(a, b):
-	if a[0] > b[0]:
-		return true
-	return false
+    if a[0] > b[0]:
+        return true
+    return false
 
 func get_child_i(num) -> Node:
-	return inventory_base.get_child(num)
+    return inventory_base.get_child(num)
