@@ -89,6 +89,7 @@ func _replace_node(_add_node, id:int, num:int, type:String):
     _add_node.item_num = num
     _add_node.item_name = _data[type].data[id].name
     if "icon" in _data[type].data[id]:
+        _add_node.item_icon_type = _data[type].data[id].type
         _add_node.item_icon = _data[type].data[id].icon
 
 
